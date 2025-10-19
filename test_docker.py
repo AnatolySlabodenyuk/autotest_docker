@@ -1,49 +1,60 @@
 import os
+import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
-# если контейнер на этой же машине
 SELENIUM_HOST = os.getenv("SELENIUM_HOST", "localhost")
-SELENIUM_PORT = os.getenv("SELENIUM_PORT", "4444")
+REMOTE_URL = f"http://{SELENIUM_HOST}:4444"
 
-# Указываем удалённый WebDriver
-driver = webdriver.Remote(
-    command_executor=f"http://{SELENIUM_HOST}:{SELENIUM_PORT}",
-    options=webdriver.ChromeOptions()
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
+logger = logging.getLogger(__name__)
 
-try:
-    # Переходим на сайт duckduckgo
-    driver.get("https://duckduckgo.com")
 
-    wait = WebDriverWait(driver, 10)  # Даем странице загрузиться
+def test_duckduckgo_search_results():
+    # driver = webdriver.Chrome()  # локальный браузер
 
-    # Находим поле поиска
-    search_box = wait.until(EC.presence_of_element_located((By.NAME, "q")))
+    # Раскомментировать, когда запускаете в Докере
+    options = Options()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
-    # Вводим запрос
-    search_query = "Selenium Python"
-    search_box.send_keys(search_query)
-    search_box.send_keys(Keys.RETURN)
+    driver = webdriver.Remote(
+        command_executor=REMOTE_URL,  # "http://localhost:4444",
+        options=options
+    )
 
-    # Ждем загрузки результатов
-    wait.until(EC.presence_of_all_elements_located(
-        (By.CSS_SELECTOR, "a.result__a")))
-    results = driver.find_elements(By.CSS_SELECTOR, "a.result__a")
+    try:
+        driver.get("https://duckduckgo.com/")
+        # Найти поле поиска на главной странице
+        search_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "searchbox_input"))
+        )
+        search_input.send_keys("Нетология")
+        search_input.send_keys(Keys.RETURN)
 
-    if results:
-        print(f"Найдено результатов: {len(results)}")
-    else:
-        print("Результаты поиска не найдены.")
+        # Ждать появления результатов поиска
+        WebDriverWait(driver, 4).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "article[data-nrn='result']"))
+        )
 
-except Exception as e:
-    driver.save_screenshot("error.png")
-    print(f"Произошла ошибка: {e}")
+        # Получить все результаты поиска
+        results = driver.find_elements(By.CSS_SELECTOR, "article[data-nrn='result']")
+        logger.info(f"Найдено результатов: {len(results)}")
+        assert len(results) > 0, "Результаты не найдены"
 
-# Сессия будет активна до тех пор, пока не нажать Enter
-finally:
-    input("Тест запущен. Нажмите Enter, чтобы завершить и закрыть сессию...")
-    driver.quit()
+    finally:
+        input('Нажмите что-нибудь\n')
+        driver.quit()
+
+
+if __name__ == "__main__":
+    test_duckduckgo_search_results()
