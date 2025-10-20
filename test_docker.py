@@ -5,7 +5,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
 
 SELENIUM_HOST = os.getenv("SELENIUM_HOST", "localhost")
 REMOTE_URL = f"http://{SELENIUM_HOST}:4444"
@@ -22,8 +21,7 @@ logger = logging.getLogger(__name__)
 def test_duckduckgo_search_results():
     # driver = webdriver.Chrome()  # локальный браузер
 
-    # Раскомментировать, когда запускаете в Докере
-    options = Options()
+    options = webdriver.ChromeOptions()
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
